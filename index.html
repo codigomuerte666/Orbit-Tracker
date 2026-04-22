@@ -1,1 +1,1455 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE VAST SPACE INITIATIVE - Solar System Tracker</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --nasa-blue: #005387;
+            --space-dark: #0a0e27;
+            --deep-space: #16213e;
+            --space-accent: #0f3460;
+            --accent-cyan: #64c8ff;
+            --electric-blue: #00E5FF;
+            --space-purple: #9F64FF;
+            --alert-red: #E22028;
+            --nasa-red: #FC3D21;
+            --caution-orange: #EC8629;
+            --warning-yellow: #F9A800;
+            --safe-green: #237F52;
+            --asteroid-orange: #FF6B35;
+            --asteroid-hazard: #FF0000;
+            --panel-gray: #E0E0E0;
+            --text-primary: #3F3F3F;
+            --text-light: #FFFFFF;
+            --text-secondary: #CACACA;
+            --font-heading: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            --font-body: 'Inter', system-ui, sans-serif;
+            --font-data: 'Space Mono', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-body);
+            background: linear-gradient(135deg, var(--space-dark) 0%, var(--deep-space) 50%, var(--space-accent) 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            color: var(--text-light);
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(0deg, rgba(100, 200, 255, 0.02) 0px, transparent 1px, transparent 40px),
+                repeating-linear-gradient(60deg, rgba(100, 200, 255, 0.02) 0px, transparent 1px, transparent 40px),
+                repeating-linear-gradient(120deg, rgba(100, 200, 255, 0.02) 0px, transparent 1px, transparent 40px);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .particle-field {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: radial-gradient(circle, rgba(100, 200, 255, 0.6), transparent);
+            border-radius: 50%;
+            animation: float var(--duration) ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); opacity: 0.3; }
+            50% { transform: translate(var(--tx), var(--ty)); opacity: 0.6; }
+        }
+
+        .header-logo {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            text-align: center;
+        }
+
+        .header-logo h1 {
+            font-family: var(--font-heading);
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            color: var(--text-light);
+            text-transform: uppercase;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.8), 0 0 16px rgba(100, 200, 255, 0.4);
+        }
+
+        .header-logo h1 .vast-red {
+            color: var(--nasa-red);
+            text-shadow: 0 0 8px rgba(252, 61, 33, 1), 0 0 16px rgba(252, 61, 33, 0.6);
+        }
+
+        .header-logo h1::before {
+            content: '✦';
+            position: absolute;
+            left: -22px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 10px;
+            color: var(--accent-cyan);
+            animation: twinkle 2s ease-in-out infinite;
+        }
+
+        .header-logo .logo-mark {
+            position: absolute;
+            right: -22px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 10px;
+            color: var(--accent-cyan);
+            animation: twinkle 2s ease-in-out infinite 1s;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .header-logo p {
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .map-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+        }
+
+        #map-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .side-controls {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 60px;
+            background: rgba(224, 224, 224, 0.15);
+            border: 1px solid rgba(100, 200, 255, 0.25);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+            padding: 15px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .side-controls.left { left: 20px; }
+        .side-controls.right { right: 20px; }
+
+        .control-btn {
+            background: rgba(100, 200, 255, 0.1);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            color: var(--accent-cyan);
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover {
+            background: rgba(100, 200, 255, 0.2);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 12px rgba(100, 200, 255, 0.3);
+        }
+
+        .control-label {
+            font-size: 8px;
+            color: var(--text-secondary);
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .bottom-panels {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            z-index: 100;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .data-panel {
+            background: rgba(224, 224, 224, 0.15);
+            border: 1px solid rgba(100, 200, 255, 0.25);
+            border-radius: 12px 12px 0 0;
+            backdrop-filter: blur(12px);
+            padding: 15px 20px;
+            min-width: 280px;
+            max-width: 350px;
+        }
+
+        .data-panel:hover {
+            border-color: rgba(100, 200, 255, 0.4);
+            transition: border-color 0.3s ease;
+        }
+
+        .panel-header {
+            font-family: var(--font-heading);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent-cyan);
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(100, 200, 255, 0.2);
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            font-size: 10px;
+            border-bottom: 1px solid rgba(100, 200, 255, 0.05);
+        }
+
+        .data-label {
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-value {
+            font-family: var(--font-data);
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            font-size: 8px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-live {
+            background: rgba(35, 127, 82, 0.2);
+            color: var(--safe-green);
+        }
+
+        .status-loading {
+            background: rgba(249, 168, 0, 0.2);
+            color: var(--warning-yellow);
+        }
+
+        .status-error {
+            background: rgba(226, 32, 40, 0.2);
+            color: var(--alert-red);
+        }
+
+        .layer-controls {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 150;
+            display: flex;
+            gap: 8px;
+            background: rgba(224, 224, 224, 0.12);
+            border: 1px solid rgba(100, 200, 255, 0.25);
+            border-radius: 50px;
+            padding: 8px 15px;
+            backdrop-filter: blur(12px);
+        }
+
+        .layer-btn {
+            background: transparent;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            color: var(--text-secondary);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 9px;
+            font-family: var(--font-body);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .layer-btn:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .layer-btn.active {
+            background: rgba(100, 200, 255, 0.15);
+            border-color: var(--accent-cyan);
+            color: var(--text-light);
+            box-shadow: 0 0 12px rgba(100, 200, 255, 0.3);
+        }
+
+        .info-popup {
+            position: fixed;
+            background: rgba(224, 224, 224, 0.95);
+            border: 1px solid rgba(100, 200, 255, 0.5);
+            border-radius: 10px;
+            padding: 15px;
+            color: #000000;
+            font-size: 11px;
+            font-family: var(--font-data);
+            pointer-events: none;
+            z-index: 10001;
+            display: none;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            max-width: 300px;
+        }
+
+        .info-popup.active { display: block; }
+
+        .info-popup-title {
+            color: var(--nasa-blue);
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-popup-row {
+            margin: 4px 0;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .info-popup-label {
+            color: #000000;
+        }
+
+        .info-popup-value {
+            font-weight: bold;
+            color: #000000;
+            text-align: right;
+        }
+
+        .hazard-badge {
+            display: inline-block;
+            background: rgba(255, 0, 0, 0.2);
+            color: var(--alert-red);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
+        @media (max-width: 1024px) {
+            .data-panel { min-width: 220px; }
+            .header-logo h1 { font-size: 22px; }
+        }
+
+        @media (max-width: 768px) {
+            .bottom-panels { flex-wrap: wrap; }
+            .data-panel { min-width: 45%; }
+            .side-controls { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="particle-field" id="particleField"></div>
+    
+    <div class="header-logo">
+        <h1>THE <span class="vast-red">VAST</span> SPACE INITIATIVE<span class="logo-mark">✦</span></h1>
+        <p>SOLAR SYSTEM TRACKING</p>
+    </div>
+
+    <div class="map-container">
+        <canvas id="map-canvas"></canvas>
+    </div>
+
+    <div class="info-popup" id="infoPopup">
+        <div class="info-popup-title" id="popupTitle">Object Info</div>
+        <div id="popupContent"></div>
+    </div>
+
+    <div class="side-controls left">
+        <div class="control-label">ZOOM</div>
+        <button class="control-btn" id="zoomIn">+</button>
+        <button class="control-btn" id="zoomOut">−</button>
+        <button class="control-btn" id="resetView">⟲</button>
+    </div>
+
+    <div class="side-controls right">
+        <div class="control-label">ROTATE</div>
+        <button class="control-btn" id="rotateUp">↑</button>
+        <button class="control-btn" id="rotateDown">↓</button>
+        <button class="control-btn" id="rotateLeft">←</button>
+        <button class="control-btn" id="rotateRight">→</button>
+    </div>
+
+    <div class="layer-controls">
+        <button class="layer-btn active" data-layer="aircraft">✈ AIRCRAFT</button>
+        <button class="layer-btn active" data-layer="satellites">🛰 SATELLITES</button>
+        <button class="layer-btn active" data-layer="iss">🚀 ISS</button>
+        <button class="layer-btn active" data-layer="asteroids">☄ ASTEROIDS</button>
+        <button class="layer-btn active" data-layer="debris">💥 DEBRIS</button>
+        <button class="layer-btn active" data-layer="planets">🪐 PLANETS</button>
+    </div>
+
+    <div class="bottom-panels">
+        <div class="data-panel">
+            <div class="panel-header">
+                <span>LIVE AVIATION</span>
+                <span class="status-indicator status-loading" id="aviationStatus">CONNECTING</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">TOTAL AIRCRAFT</span>
+                <span class="data-value" id="aircraftCount">---</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">IN FLIGHT</span>
+                <span class="data-value" id="inFlight">---</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">ON GROUND</span>
+                <span class="data-value" id="onGround">---</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">AVG ALTITUDE</span>
+                <span class="data-value" id="avgAltitude">---</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">MAX ALTITUDE</span>
+                <span class="data-value" id="maxAltitude">---</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">AVG SPEED</span>
+                <span class="data-value" id="avgVelocity">---</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">API SOURCE</span>
+                <span class="data-value" id="apiSource">---</span>
+            </div>
+        </div>
+
+        <div class="data-panel">
+            <div class="panel-header">
+                <span>ISS STATION</span>
+                <span class="status-indicator status-loading" id="issStatus">STANDBY</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">ALTITUDE</span>
+                <span class="data-value" id="issAltitude">---</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">VELOCITY</span>
+                <span class="data-value" id="issVelocity">---</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">LATITUDE</span>
+                <span class="data-value" id="issLat">---</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">LONGITUDE</span>
+                <span class="data-value" id="issLon">---</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">VISIBILITY</span>
+                <span class="data-value" id="issVisibility">---</span>
+            </div>
+        </div>
+
+        <div class="data-panel">
+            <div class="panel-header">
+                <span>NEAR EARTH OBJECTS</span>
+                <span class="status-indicator status-loading" id="asteroidStatus">LOADING</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">ASTEROIDS TRACKED</span>
+                <span class="data-value" id="asteroidCount">---</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">HAZARDOUS</span>
+                <span class="data-value" id="hazardousCount" style="color: var(--alert-red);">---</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">CLOSEST APPROACH</span>
+                <span class="data-value" id="closestDistance">---</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">AVG DIAMETER</span>
+                <span class="data-value" id="avgDiameter">---</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">FASTEST</span>
+                <span class="data-value" id="fastestVelocity">---</span>
+            </div>
+        </div>
+
+        <div class="data-panel">
+            <div class="panel-header">
+                <span>SPACE OBJECTS</span>
+                <span class="status-indicator status-live">TRACKING</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">SATELLITES</span>
+                <span class="data-value" id="satCount">40</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">DEBRIS TRACKED</span>
+                <span class="data-value" id="debrisCount">25</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">LAYER: AIRCRAFT</span>
+                <span class="data-value" style="color: var(--safe-green);">0-12 km</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">LAYER: SATELLITES</span>
+                <span class="data-value" style="color: var(--warning-yellow);">500-36k km</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">LAYER: ISS</span>
+                <span class="data-value" style="color: var(--nasa-red);">~420 km</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('Solar System Tracker starting...');
+        
+        const NASA_API_KEY = 'DEMO_KEY';
+        const EARTH_RADIUS = 2;
+        
+        let scene, camera, renderer, controls;
+        let earthSystem, earthMesh, solarSystem;
+        let planetGroups = [];
+        let aircraftMarkers = [], satelliteMarkers = [], issMarker, debrisMarkers = [], asteroidMarkers = [];
+        let aircraftTrails = [], satelliteTrails = [], issTrail = null, debrisTrails = [], asteroidTrails = [];
+        let flightData = [], satelliteData = [], issData = null, debrisData = [], asteroidData = [];
+        let issHistory = [], objectHistories = new Map();
+        let activeLayers = { aircraft: true, satellites: true, iss: true, debris: true, asteroids: true, planets: true };
+        let raycaster, mouse, clickableObjects = [];
+        let lastTime = performance.now();
+        
+        const API_URL = 'https://opensky-network.org/api/states/all';
+        
+        function initMap() {
+            console.log('Initializing 3D Solar System...');
+            const canvas = document.getElementById('map-canvas');
+            
+            scene = new THREE.Scene();
+            scene.background = null;
+            
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(12, 8, 15);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ 
+                canvas, 
+                alpha: true, 
+                antialias: true 
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setClearColor(0x000000, 0);
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            // LIGHTING
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            sunLight.position.set(-50, 10, 0);
+            scene.add(sunLight);
+
+            // EARTH SYSTEM IN CENTER
+            earthSystem = new THREE.Group();
+            scene.add(earthSystem);
+            console.log('Earth system created at origin');
+
+            // 3D EARTH GLOBE
+            const earthGeo = new THREE.SphereGeometry(EARTH_RADIUS, 64, 64);
+            const earthMat = new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                specular: 0x333333,
+                shininess: 15
+            });
+            
+            earthMesh = new THREE.Mesh(earthGeo, earthMat);
+            earthSystem.add(earthMesh);
+            console.log('3D Earth globe created');
+
+            // Load Earth texture
+            const textureLoader = new THREE.TextureLoader();
+            textureLoader.crossOrigin = 'anonymous';
+            textureLoader.load(
+                'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
+                (texture) => {
+                    console.log('Earth texture loaded');
+                    earthMesh.material.map = texture;
+                    earthMesh.material.needsUpdate = true;
+                },
+                undefined,
+                (error) => {
+                    console.log('Texture failed, using plain sphere:', error);
+                }
+            );
+
+            // CROSS GRIDS THROUGH EARTH
+            const gridSize = 20;
+            const gridDivisions = 40;
+            const gridColor = 0x64c8ff;
+            const gridColor2 = 0x446688;
+
+            // Horizontal grid (XZ-plane)
+            const gridXZ = new THREE.GridHelper(gridSize, gridDivisions, gridColor, gridColor2);
+            gridXZ.material.opacity = 0.15;
+            gridXZ.material.transparent = true;
+            scene.add(gridXZ);
+
+            // Vertical grid (XY-plane)
+            const gridXY = new THREE.GridHelper(gridSize, gridDivisions, gridColor, gridColor2);
+            gridXY.rotation.x = Math.PI / 2;
+            gridXY.material.opacity = 0.15;
+            gridXY.material.transparent = true;
+            scene.add(gridXY);
+
+            // Vertical grid (YZ-plane)
+            const gridYZ = new THREE.GridHelper(gridSize, gridDivisions, gridColor, gridColor2);
+            gridYZ.rotation.z = Math.PI / 2;
+            gridYZ.material.opacity = 0.15;
+            gridYZ.material.transparent = true;
+            scene.add(gridYZ);
+
+            console.log('Cross grids created');
+
+            // SOLAR SYSTEM
+            createSolarSystem();
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 5;
+            controls.maxDistance = 150;
+
+            canvas.addEventListener('click', onCanvasClick);
+            canvas.addEventListener('mousemove', onCanvasMouseMove);
+
+            animate();
+        }
+
+        function createSolarSystem() {
+            solarSystem = new THREE.Group();
+            scene.add(solarSystem);
+
+            // SUN (offset from Earth)
+            const sun = new THREE.Mesh(
+                new THREE.SphereGeometry(5, 32, 32),
+                new THREE.MeshBasicMaterial({ 
+                    color: 0xFDB813,
+                    emissive: 0xFDB813
+                })
+            );
+            sun.position.set(-60, 0, 0);
+            solarSystem.add(sun);
+
+            // Sun glow
+            const glowGeometry = new THREE.SphereGeometry(6, 32, 32);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: 0xFFFF88,
+                transparent: true,
+                opacity: 0.3
+            });
+            const sunGlow = new THREE.Mesh(glowGeometry, glowMaterial);
+            sun.add(sunGlow);
+
+            console.log('Sun created');
+
+            // PLANET CONFIGURATIONS (scaled for visibility)
+            const planetConfigs = [
+                { name: 'Mercury', radius: 0.4, orbitRadius: 15, orbitSpeed: 0.04, rotationSpeed: 0.01, color: 0x8C7853 },
+                { name: 'Venus', radius: 0.9, orbitRadius: 20, orbitSpeed: 0.03, rotationSpeed: 0.008, color: 0xFFC649 },
+                { name: 'Mars', radius: 0.5, orbitRadius: 30, orbitSpeed: 0.024, rotationSpeed: 0.025, color: 0xCD5C5C },
+                { name: 'Jupiter', radius: 2.5, orbitRadius: 50, orbitSpeed: 0.013, rotationSpeed: 0.04, color: 0xC88B3A },
+                { name: 'Saturn', radius: 2.2, orbitRadius: 70, orbitSpeed: 0.009, rotationSpeed: 0.038, color: 0xFAD5A5 },
+                { name: 'Uranus', radius: 1.5, orbitRadius: 90, orbitSpeed: 0.006, rotationSpeed: 0.03, color: 0x4FD0E7 },
+                { name: 'Neptune', radius: 1.4, orbitRadius: 110, orbitSpeed: 0.005, rotationSpeed: 0.032, color: 0x4166F5 }
+            ];
+
+            planetConfigs.forEach(config => {
+                const planetGroup = createPlanet(config);
+                planetGroups.push(planetGroup);
+                
+                // Create orbit line
+                createOrbit(config.orbitRadius);
+            });
+
+            console.log(`Created ${planetGroups.length} planets`);
+        }
+
+        function createPlanet(opts) {
+            const planetGroup = new THREE.Group();
+            solarSystem.add(planetGroup);
+
+            const planetGeo = new THREE.SphereGeometry(opts.radius, 32, 32);
+            const planetMat = new THREE.MeshPhongMaterial({ 
+                color: opts.color,
+                shininess: 10
+            });
+            const planetMesh = new THREE.Mesh(planetGeo, planetMat);
+
+            // Position along X-axis initially
+            planetMesh.position.set(opts.orbitRadius - 60, 0, 0); // -60 to account for sun position
+            planetGroup.add(planetMesh);
+
+            planetGroup.userData = {
+                name: opts.name,
+                mesh: planetMesh,
+                orbitRadius: opts.orbitRadius,
+                orbitSpeed: opts.orbitSpeed,
+                rotationSpeed: opts.rotationSpeed,
+                orbitAngle: Math.random() * Math.PI * 2 // Random start position
+            };
+
+            return planetGroup;
+        }
+
+        function createOrbit(radius) {
+            const curve = new THREE.EllipseCurve(
+                -60, 0,  // center at sun position
+                radius, radius,
+                0, 2 * Math.PI,
+                false,
+                0
+            );
+            const points = curve.getPoints(128);
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            geometry.rotateX(-Math.PI / 2);
+
+            const material = new THREE.LineBasicMaterial({ 
+                color: 0x555577,
+                transparent: true,
+                opacity: 0.3
+            });
+            const orbit = new THREE.LineLoop(geometry, material);
+            orbit.position.y = 0;
+            solarSystem.add(orbit);
+        }
+
+        function updateSolarSystem(delta) {
+            if (!activeLayers.planets) return;
+
+            planetGroups.forEach(group => {
+                const data = group.userData;
+                data.orbitAngle += data.orbitSpeed * delta;
+
+                const x = Math.cos(data.orbitAngle) * data.orbitRadius - 60;
+                const z = Math.sin(data.orbitAngle) * data.orbitRadius;
+                data.mesh.position.set(x, 0, z);
+
+                data.mesh.rotation.y += data.rotationSpeed * delta;
+            });
+
+            // Rotate Earth slowly
+            if (earthMesh) {
+                earthMesh.rotation.y += 0.01 * delta;
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const now = performance.now();
+            const delta = (now - lastTime) / 1000;
+            lastTime = now;
+
+            updateSolarSystem(delta);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // SPHERICAL PROJECTION (lat/lon → 3D sphere coordinates)
+        function latLonToVector3Sphere(lat, lon, altitude = 0) {
+            const phi = (90 - lat) * (Math.PI / 180);
+            const theta = (lon + 180) * (Math.PI / 180);
+            
+            const radius = EARTH_RADIUS + (altitude / 1000000); // Scale altitude
+            
+            const x = -(radius * Math.sin(phi) * Math.cos(theta));
+            const z = (radius * Math.sin(phi) * Math.sin(theta));
+            const y = (radius * Math.cos(phi));
+            
+            return new THREE.Vector3(x, y, z);
+        }
+
+        // ========== NASA NeoWs ASTEROID DATA ==========
+        async function fetchAsteroidData() {
+            const statusEl = document.getElementById('asteroidStatus');
+            
+            try {
+                statusEl.className = 'status-indicator status-loading';
+                statusEl.textContent = 'FETCHING';
+
+                const today = new Date();
+                const endDate = new Date(today);
+                endDate.setDate(endDate.getDate() + 7);
+                
+                const startStr = today.toISOString().split('T')[0];
+                const endStr = endDate.toISOString().split('T')[0];
+                
+                const url = `https://api.nasa.gov/neo/rest/v1/feed?start_date=${startStr}&end_date=${endStr}&api_key=${NASA_API_KEY}`;
+                
+                console.log('Fetching asteroids from NASA NeoWs...');
+                const response = await fetch(url);
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                
+                asteroidData = [];
+                Object.keys(data.near_earth_objects).forEach(date => {
+                    asteroidData.push(...data.near_earth_objects[date]);
+                });
+                
+                console.log(`Fetched ${asteroidData.length} asteroids`);
+                
+                processAsteroidData(asteroidData);
+                updateAsteroidMarkers();
+
+                statusEl.className = 'status-indicator status-live';
+                statusEl.textContent = 'LIVE';
+            } catch (error) {
+                console.error('Asteroid fetch error:', error);
+                statusEl.className = 'status-indicator status-error';
+                statusEl.textContent = 'ERROR';
+            }
+        }
+
+        function processAsteroidData(asteroids) {
+            if (!asteroids || asteroids.length === 0) return;
+
+            let hazardousCount = 0;
+            let totalDiameter = 0;
+            let closestDistance = Infinity;
+            let fastestVelocity = 0;
+
+            asteroids.forEach(asteroid => {
+                if (asteroid.is_potentially_hazardous_asteroid) hazardousCount++;
+                
+                const diameter = (asteroid.estimated_diameter.meters.estimated_diameter_min + 
+                                 asteroid.estimated_diameter.meters.estimated_diameter_max) / 2;
+                totalDiameter += diameter;
+                
+                asteroid.close_approach_data.forEach(approach => {
+                    const distance = parseFloat(approach.miss_distance.kilometers);
+                    const velocity = parseFloat(approach.relative_velocity.kilometers_per_second);
+                    
+                    if (distance < closestDistance) closestDistance = distance;
+                    if (velocity > fastestVelocity) fastestVelocity = velocity;
+                });
+            });
+
+            document.getElementById('asteroidCount').textContent = asteroids.length;
+            document.getElementById('hazardousCount').textContent = hazardousCount;
+            document.getElementById('closestDistance').textContent = closestDistance < Infinity 
+                ? Math.round(closestDistance).toLocaleString() + ' km' 
+                : '---';
+            document.getElementById('avgDiameter').textContent = Math.round(totalDiameter / asteroids.length) + ' m';
+            document.getElementById('fastestVelocity').textContent = fastestVelocity.toFixed(1) + ' km/s';
+        }
+
+        function updateAsteroidMarkers() {
+            asteroidMarkers.forEach(m => earthSystem.remove(m));
+            asteroidTrails.forEach(t => earthSystem.remove(t));
+            asteroidMarkers = [];
+            asteroidTrails = [];
+            
+            if (!activeLayers.asteroids) return;
+
+            asteroidData.slice(0, 30).forEach(asteroid => {
+                asteroid.close_approach_data.forEach(approach => {
+                    const lat = (Math.random() - 0.5) * 180;
+                    const lon = (Math.random() - 0.5) * 360;
+                    const distance = parseFloat(approach.miss_distance.kilometers);
+                    const altitude = distance * 5000; // Scale for visibility
+                    
+                    const position = latLonToVector3Sphere(lat, lon, altitude);
+                    
+                    const isHazardous = asteroid.is_potentially_hazardous_asteroid;
+                    const diameter = (asteroid.estimated_diameter.meters.estimated_diameter_min + 
+                                     asteroid.estimated_diameter.meters.estimated_diameter_max) / 2;
+                    
+                    const size = Math.max(0.08, Math.min(0.18, diameter / 150));
+                    
+                    const geometry = new THREE.SphereGeometry(size, 10, 10);
+                    const material = new THREE.MeshBasicMaterial({ 
+                        color: isHazardous ? 0xFF0000 : 0xFF6B35 
+                    });
+                    const marker = new THREE.Mesh(geometry, material);
+                    marker.position.copy(position);
+                    marker.userData = {
+                        type: 'asteroid',
+                        name: asteroid.name,
+                        id: asteroid.id,
+                        diameter: diameter,
+                        hazardous: isHazardous,
+                        velocity: parseFloat(approach.relative_velocity.kilometers_per_second),
+                        distance: distance,
+                        approach_date: approach.close_approach_date,
+                        magnitude: asteroid.absolute_magnitude_h
+                    };
+                    earthSystem.add(marker);
+                    asteroidMarkers.push(marker);
+                    clickableObjects.push(marker);
+                });
+            });
+            
+            console.log(`Added ${asteroidMarkers.length} asteroid markers on sphere`);
+        }
+
+        // ========== AIRCRAFT DATA ==========
+        async function fetchAircraftData() {
+            const statusEl = document.getElementById('aviationStatus');
+            const apiSourceEl = document.getElementById('apiSource');
+            
+            try {
+                statusEl.className = 'status-indicator status-loading';
+                statusEl.textContent = 'FETCHING';
+                apiSourceEl.textContent = 'OpenSky';
+
+                const response = await fetch(API_URL);
+                
+                if (response.status === 429) {
+                    statusEl.className = 'status-indicator status-error';
+                    statusEl.textContent = 'RATE LIMITED';
+                    return;
+                }
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                flightData = (data.states || []).slice(0, 150);
+                
+                processAircraftData(flightData);
+                updateAircraftMarkers();
+
+                statusEl.className = 'status-indicator status-live';
+                statusEl.textContent = 'LIVE';
+            } catch (error) {
+                console.error('Aircraft error:', error);
+                statusEl.className = 'status-indicator status-error';
+                statusEl.textContent = 'ERROR';
+                apiSourceEl.textContent = 'OFFLINE';
+            }
+        }
+
+        function processAircraftData(states) {
+            if (!states || states.length === 0) return;
+
+            let totalAltitude = 0, totalVelocity = 0, validAltitudes = 0, validVelocities = 0;
+            let onGroundCount = 0, inFlightCount = 0, maxAlt = 0;
+
+            states.forEach(flight => {
+                const altitude = flight[7];
+                const onGround = flight[8];
+                const velocity = flight[9];
+
+                if (onGround) onGroundCount++;
+                else inFlightCount++;
+
+                if (altitude !== null && !onGround) {
+                    totalAltitude += altitude;
+                    validAltitudes++;
+                    if (altitude > maxAlt) maxAlt = altitude;
+                }
+
+                if (velocity !== null && !onGround) {
+                    totalVelocity += velocity;
+                    validVelocities++;
+                }
+            });
+
+            document.getElementById('aircraftCount').textContent = states.length;
+            document.getElementById('avgAltitude').textContent = validAltitudes > 0 ? Math.round(totalAltitude / validAltitudes) + ' m' : '---';
+            document.getElementById('avgVelocity').textContent = validVelocities > 0 ? Math.round(totalVelocity) + ' m/s' : '---';
+            document.getElementById('onGround').textContent = onGroundCount;
+            document.getElementById('inFlight').textContent = inFlightCount;
+            document.getElementById('maxAltitude').textContent = Math.round(maxAlt) + ' m';
+        }
+
+        function updateAircraftMarkers() {
+            aircraftMarkers.forEach(m => earthSystem.remove(m));
+            aircraftTrails.forEach(t => earthSystem.remove(t));
+            aircraftMarkers = [];
+            aircraftTrails = [];
+            
+            if (!activeLayers.aircraft) return;
+
+            flightData.forEach(flight => {
+                const lon = flight[5];
+                const lat = flight[6];
+                const altitude = flight[7] || 10000;
+                const callsign = flight[1] || 'Unknown';
+                const velocity = flight[9] || 0;
+                const onGround = flight[8];
+                
+                if (!lat || !lon || onGround) return;
+
+                const position = latLonToVector3Sphere(lat, lon, altitude);
+                
+                const geometry = new THREE.SphereGeometry(0.03, 8, 8);
+                const material = new THREE.MeshBasicMaterial({ color: 0x64c8ff });
+                const marker = new THREE.Mesh(geometry, material);
+                marker.position.copy(position);
+                marker.userData = { type: 'aircraft', icao: flight[0], callsign, altitude, velocity, lat, lon };
+                earthSystem.add(marker);
+                aircraftMarkers.push(marker);
+                clickableObjects.push(marker);
+            });
+            
+            console.log(`Added ${aircraftMarkers.length} aircraft markers on sphere`);
+        }
+
+        // ========== ISS DATA ==========
+        async function fetchISSData() {
+            const statusEl = document.getElementById('issStatus');
+            
+            try {
+                const response = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+                issData = await response.json();
+                
+                document.getElementById('issAltitude').textContent = Math.round(issData.altitude) + ' km';
+                document.getElementById('issVelocity').textContent = Math.round(issData.velocity * 3.6) + ' km/h';
+                document.getElementById('issLat').textContent = issData.latitude.toFixed(2) + '°';
+                document.getElementById('issLon').textContent = issData.longitude.toFixed(2) + '°';
+                document.getElementById('issVisibility').textContent = issData.visibility || 'Daylight';
+                
+                issHistory.push({
+                    lat: issData.latitude,
+                    lon: issData.longitude,
+                    altitude: issData.altitude * 1000
+                });
+                
+                if (issHistory.length > 50) issHistory.shift();
+                
+                updateISSMarker();
+                updateISSTrail();
+
+                statusEl.className = 'status-indicator status-live';
+                statusEl.textContent = 'LIVE';
+            } catch (error) {
+                console.error('ISS error:', error);
+            }
+        }
+
+        function updateISSMarker() {
+            if (issMarker) {
+                earthSystem.remove(issMarker);
+                clickableObjects = clickableObjects.filter(o => o !== issMarker);
+            }
+            if (!activeLayers.iss || !issData) return;
+
+            const position = latLonToVector3Sphere(issData.latitude, issData.longitude, issData.altitude * 1000);
+            const geometry = new THREE.SphereGeometry(0.08, 16, 16);
+            const material = new THREE.MeshBasicMaterial({ color: 0xFC3D21 });
+            issMarker = new THREE.Mesh(geometry, material);
+            issMarker.position.copy(position);
+            issMarker.userData = { 
+                type: 'iss', 
+                name: 'ISS', 
+                altitude: issData.altitude,
+                velocity: issData.velocity,
+                lat: issData.latitude,
+                lon: issData.longitude
+            };
+            earthSystem.add(issMarker);
+            clickableObjects.push(issMarker);
+            
+            console.log('ISS marker added on sphere');
+        }
+
+        function updateISSTrail() {
+            if (issTrail) earthSystem.remove(issTrail);
+            if (!activeLayers.iss || issHistory.length < 2) return;
+
+            const points = issHistory.map(point => 
+                latLonToVector3Sphere(point.lat, point.lon, point.altitude)
+            );
+
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({
+                color: 0xFC3D21,
+                transparent: true,
+                opacity: 0.6
+            });
+
+            issTrail = new THREE.Line(geometry, material);
+            earthSystem.add(issTrail);
+        }
+
+        // ========== SATELLITES & DEBRIS ==========
+        async function fetchSatelliteData() {
+            satelliteData = generateMockSatellites(40);
+            updateSatelliteMarkers();
+        }
+
+        function generateMockSatellites(count) {
+            const sats = [];
+            for (let i = 0; i < count; i++) {
+                sats.push({
+                    id: 'SAT-' + i,
+                    lat: (Math.random() - 0.5) * 180,
+                    lon: (Math.random() - 0.5) * 360,
+                    altitude: 500000 + Math.random() * 35000000
+                });
+            }
+            return sats;
+        }
+
+        function updateSatelliteMarkers() {
+            satelliteMarkers.forEach(m => earthSystem.remove(m));
+            satelliteTrails.forEach(t => earthSystem.remove(t));
+            satelliteMarkers = [];
+            satelliteTrails = [];
+            
+            if (!activeLayers.satellites) return;
+
+            satelliteData.forEach(sat => {
+                const position = latLonToVector3Sphere(sat.lat, sat.lon, sat.altitude);
+                const geometry = new THREE.SphereGeometry(0.05, 8, 8);
+                const material = new THREE.MeshBasicMaterial({ color: 0x9F64FF });
+                const marker = new THREE.Mesh(geometry, material);
+                marker.position.copy(position);
+                marker.userData = { type: 'satellite', id: sat.id, altitude: sat.altitude, lat: sat.lat, lon: sat.lon };
+                earthSystem.add(marker);
+                satelliteMarkers.push(marker);
+                clickableObjects.push(marker);
+            });
+            
+            console.log(`Added ${satelliteMarkers.length} satellites on sphere`);
+        }
+
+        async function fetchDebrisData() {
+            debrisData = generateMockDebris(25);
+            updateDebrisMarkers();
+        }
+
+        function generateMockDebris(count) {
+            const debris = [];
+            for (let i = 0; i < count; i++) {
+                debris.push({
+                    id: 'DEB-' + i,
+                    lat: (Math.random() - 0.5) * 180,
+                    lon: (Math.random() - 0.5) * 360,
+                    altitude: 200000 + Math.random() * 2000000
+                });
+            }
+            return debris;
+        }
+
+        function updateDebrisMarkers() {
+            debrisMarkers.forEach(m => earthSystem.remove(m));
+            debrisTrails.forEach(t => earthSystem.remove(t));
+            debrisMarkers = [];
+            debrisTrails = [];
+            
+            if (!activeLayers.debris) return;
+
+            debrisData.forEach(debris => {
+                const position = latLonToVector3Sphere(debris.lat, debris.lon, debris.altitude);
+                const geometry = new THREE.SphereGeometry(0.03, 6, 6);
+                const material = new THREE.MeshBasicMaterial({ color: 0xE22028 });
+                const marker = new THREE.Mesh(geometry, material);
+                marker.position.copy(position);
+                marker.userData = { type: 'debris', id: debris.id, altitude: debris.altitude };
+                earthSystem.add(marker);
+                debrisMarkers.push(marker);
+                clickableObjects.push(marker);
+            });
+            
+            console.log(`Added ${debrisMarkers.length} debris on sphere`);
+        }
+
+        // ========== CLICK HANDLERS ==========
+        function onCanvasClick(event) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(clickableObjects);
+
+            if (intersects.length > 0) {
+                showInfoPopup(intersects[0].object, event.clientX, event.clientY);
+            } else {
+                hideInfoPopup();
+            }
+        }
+
+        function onCanvasMouseMove(event) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(clickableObjects);
+
+            document.body.style.cursor = intersects.length > 0 ? 'pointer' : 'default';
+        }
+
+        function showInfoPopup(object, x, y) {
+            const popup = document.getElementById('infoPopup');
+            const title = document.getElementById('popupTitle');
+            const content = document.getElementById('popupContent');
+            
+            const data = object.userData;
+            
+            if (data.type === 'asteroid') {
+                title.innerHTML = data.name + (data.hazardous ? '<span class="hazard-badge">⚠ HAZARDOUS</span>' : '');
+                content.innerHTML = `
+                    <div class="info-popup-row">
+                        <span class="info-popup-label">Type:</span>
+                        <span class="info-popup-value">Near Earth Object</span>
+                    </div>
+                    <div class="info-popup-row">
+                        <span class="info-popup-label">Diameter:</span>
+                        <span class="info-popup-value">${Math.round(data.diameter)} m</span>
+                    </div>
+                    <div class="info-popup-row">
+                        <span class="info-popup-label">Velocity:</span>
+                        <span class="info-popup-value">${data.velocity.toFixed(2)} km/s</span>
+                    </div>
+                    <div class="info-popup-row">
+                        <span class="info-popup-label">Distance:</span>
+                        <span class="info-popup-value">${Math.round(data.distance).toLocaleString()} km</span>
+                    </div>
+                    <div class="info-popup-row">
+                        <span class="info-popup-label">Approach:</span>
+                        <span class="info-popup-value">${data.approach_date}</span>
+                    </div>
+                `;
+            } else if (data.type === 'aircraft') {
+                title.textContent = data.callsign;
+                content.innerHTML = `
+                    <div class="info-popup-row">
+                        <span class="info-popup-label">ICAO:</span>
+                        <span class="info-popup-value">${data.icao}</span>
+                    </div>
+                    <div class="info-popup-row">
+                        <span class="info-popup-label">Altitude:</span>
+                        <span class="info-popup-value">${Math.round(data.altitude)} m</span>
+                    </div>
+                    <div class="info-popup-row">
+                        <span class="info-popup-label">Speed:</span>
+                        <span class="info-popup-value">${Math.round(data.velocity)} m/s</span>
+                    </div>
+                    <div class="info-popup-row">
+                        <span class="info-popup-label">Position:</span>
+                        <span class="info-popup-value">${data.lat.toFixed(2)}°, ${data.lon.toFixed(2)}°</span>
+                    </div>
+                `;
+            } else if (data.type === 'iss') {
+                title.textContent = 'ISS';
+                content.innerHTML = `
+                    <div class="info-popup-row">
+                        <span class="info-popup-label">Altitude:</span>
+                        <span class="info-popup-value">${Math.round(data.altitude)} km</span>
+                    </div>
+                    <div class="info-popup-row">
+                        <span class="info-popup-label">Velocity:</span>
+                        <span class="info-popup-value">${Math.round(data.velocity * 3.6)} km/h</span>
+                    </div>
+                    <div class="info-popup-row">
+                        <span class="info-popup-label">Latitude:</span>
+                        <span class="info-popup-value">${data.lat.toFixed(2)}°</span>
+                    </div>
+                    <div class="info-popup-row">
+                        <span class="info-popup-label">Longitude:</span>
+                        <span class="info-popup-value">${data.lon.toFixed(2)}°</span>
+                    </div>
+                `;
+            } else if (data.type === 'satellite') {
+                title.textContent = data.id;
+                content.innerHTML = `
+                    <div class="info-popup-row">
+                        <span class="info-popup-label">Type:</span>
+                        <span class="info-popup-value">Satellite</span>
+                    </div>
+                    <div class="info-popup-row">
+                        <span class="info-popup-label">Altitude:</span>
+                        <span class="info-popup-value">${Math.round(data.altitude / 1000)} km</span>
+                    </div>
+                `;
+            } else if (data.type === 'debris') {
+                title.textContent = data.id;
+                content.innerHTML = `
+                    <div class="info-popup-row">
+                        <span class="info-popup-label">Type:</span>
+                        <span class="info-popup-value">Space Debris</span>
+                    </div>
+                    <div class="info-popup-row">
+                        <span class="info-popup-label">Altitude:</span>
+                        <span class="info-popup-value">${Math.round(data.altitude / 1000)} km</span>
+                    </div>
+                `;
+            }
+
+            popup.style.left = x + 10 + 'px';
+            popup.style.top = y + 10 + 'px';
+            popup.classList.add('active');
+        }
+
+        function hideInfoPopup() {
+            document.getElementById('infoPopup').classList.remove('active');
+        }
+
+        // ========== CONTROLS ==========
+        document.getElementById('zoomIn').addEventListener('click', () => {
+            camera.position.multiplyScalar(0.9);
+        });
+
+        document.getElementById('zoomOut').addEventListener('click', () => {
+            camera.position.multiplyScalar(1.1);
+        });
+
+        document.getElementById('resetView').addEventListener('click', () => {
+            camera.position.set(12, 8, 15);
+            camera.lookAt(0, 0, 0);
+        });
+
+        document.getElementById('rotateUp').addEventListener('click', () => {
+            camera.position.y += 2;
+        });
+
+        document.getElementById('rotateDown').addEventListener('click', () => {
+            camera.position.y -= 2;
+        });
+
+        document.getElementById('rotateLeft').addEventListener('click', () => {
+            const angle = -0.15;
+            const x = camera.position.x * Math.cos(angle) - camera.position.z * Math.sin(angle);
+            const z = camera.position.x * Math.sin(angle) + camera.position.z * Math.cos(angle);
+            camera.position.x = x;
+            camera.position.z = z;
+            camera.lookAt(0, 0, 0);
+        });
+
+        document.getElementById('rotateRight').addEventListener('click', () => {
+            const angle = 0.15;
+            const x = camera.position.x * Math.cos(angle) - camera.position.z * Math.sin(angle);
+            const z = camera.position.x * Math.sin(angle) + camera.position.z * Math.cos(angle);
+            camera.position.x = x;
+            camera.position.z = z;
+            camera.lookAt(0, 0, 0);
+        });
+
+        document.querySelectorAll('.layer-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const layer = btn.dataset.layer;
+                activeLayers[layer] = !activeLayers[layer];
+                btn.classList.toggle('active');
+
+                if (layer === 'aircraft') updateAircraftMarkers();
+                if (layer === 'satellites') updateSatelliteMarkers();
+                if (layer === 'iss') {
+                    updateISSMarker();
+                    updateISSTrail();
+                }
+                if (layer === 'debris') updateDebrisMarkers();
+                if (layer === 'asteroids') updateAsteroidMarkers();
+                if (layer === 'planets') {
+                    solarSystem.visible = activeLayers.planets;
+                }
+            });
+        });
+
+        function createParticles() {
+            const field = document.getElementById('particleField');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.setProperty('--duration', (10 + Math.random() * 15) + 's');
+                particle.style.setProperty('--tx', (Math.random() - 0.5) * 150 + 'px');
+                particle.style.setProperty('--ty', (Math.random() - 0.5) * 150 + 'px');
+                field.appendChild(particle);
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // ========== INITIALIZATION ==========
+        console.log('Starting Solar System Tracker initialization...');
+        createParticles();
+        initMap();
+
+        fetchAircraftData();
+        fetchISSData();
+        fetchSatelliteData();
+        fetchDebrisData();
+        fetchAsteroidData();
+
+        setInterval(fetchAircraftData, 30000);
+        setInterval(fetchISSData, 5000);
+        setInterval(fetchSatelliteData, 60000);
+        setInterval(fetchAsteroidData, 3600000);
+        
+        console.log('Solar System Tracker initialized! 🌍🪐☄️');
+    </script>
+</body>
+</html>
